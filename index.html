@@ -4,6 +4,17 @@
 <title>卓球ノート</title>
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#0f5c3a">
+<meta name="description" content="卓球の対戦成績を記録できる無料アプリ。3ゲーム・5ゲーム対応。">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="卓球ノート">
+<meta property="og:title" content="卓球ノート">
+<meta property="og:description" content="卓球の対戦成績を記録できる無料アプリ。3ゲーム・5ゲーム対応、登録なし。">
+<meta property="og:url" content="https://happybag-calendar.github.io/takkyu-note/">
+<meta property="og:image" content="https://happybag-calendar.github.io/takkyu-note/icons/icon-512.png">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="卓球ノート">
+<meta name="twitter:image" content="https://happybag-calendar.github.io/takkyu-note/icons/icon-512.png">
+
 <link rel="icon" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -59,10 +70,26 @@ th{color:var(--sub);font-size:15px}
 .scroll{overflow-x:auto}
 .empty{color:var(--sub);padding:10px 0}
 .note{font-size:14px;color:var(--sub)}
+.memo{margin-top:14px}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.chips button{font-size:15px;font-weight:bold;min-height:38px;padding:4px 12px;border-radius:20px;background:var(--input);color:var(--fg);border:2px solid var(--line);word-break:keep-all}
+.m .memo-t{margin:6px 0 0;padding:6px 10px;border-left:4px solid var(--ball);background:var(--bg);border-radius:6px;font-size:16px;overflow-wrap:anywhere}
+.inst{border:2px solid var(--green);background:var(--card);position:relative}
+.inst h2{margin:0 0 6px;font-size:19px;padding-right:36px}
+.inst p{margin:0 0 10px;font-size:16px;word-break:keep-all;overflow-wrap:anywhere}
+.inst ol{margin:6px 0 10px 1.3em;padding:0;font-size:16px}
+.inst .x{position:absolute;top:8px;right:8px;min-height:36px;padding:2px 10px;font-size:18px;background:transparent;color:var(--sub);border:1px solid var(--line)}
+.inst .btns{margin-top:6px}
 </style>
 </head><body>
 <div class="wrap">
 <h1><i></i>卓球 対戦成績ノート</h1>
+
+<section class="card inst" id="inst" hidden>
+<button class="x" id="instX" type="button" aria-label="閉じる">×</button>
+<h2 id="instT">アプリとして追加できます</h2>
+<div id="instBody"></div>
+</section>
 
 <section class="card" aria-labelledby="t1">
 <h2 id="t1">試合を記録する</h2>
@@ -76,6 +103,9 @@ th{color:var(--sub);font-size:15px}
 <div class="games" id="games"></div>
 <p class="hint" id="hintTxt"></p>
 <div class="result" id="result">点数を入れると、勝ち負けがここに出ます</div>
+<div class="memo"><label for="memo">一言メモ(相手の戦型など)<span style="font-weight:normal;font-size:15px;color:var(--sub)"> ※100文字まで</span></label><input id="memo" maxlength="100" placeholder="例:右ペン表。サーブが低くて速い" autocomplete="off">
+<div class="chips" id="memoChips" aria-label="戦型の見本(押すとメモに入ります)"></div>
+<div class="hint" id="memoHint"></div></div>
 <div class="btns"><button id="save">保存する</button><button class="ghost" id="clear">入力をリセット</button></div>
 <div class="msg" id="msg" role="status"></div>
 </section>
@@ -173,7 +203,7 @@ document.addEventListener("input",e=>{if(e.target.closest(".games")||e.target.id
 function say(t,err){const m=$("msg");m.textContent=t;m.className="msg"+(err?" err":"")}
 function resetForm(keepNames){
   for(let i=1;i<=G;i++){$("a"+i).value="";$("b"+i).value=""}
-  if(!keepNames){$("pa").value=getMe();$("pb").value=""}
+  $("memo").value="";if(!keepNames){$("pa").value=getMe();$("pb").value=""}memoHint();
   editingId=null;lockMe(!!getMe());$("save").textContent="保存する";updateResult();
 }
 $("clear").onclick=()=>{resetForm(false);say("")};
@@ -189,7 +219,7 @@ $("save").onclick=async()=>{
   const id=editingId||("m"+Date.now().toString(36)+Math.random().toString(36).slice(2,6));
   const wasEdit=!!editingId;if(!wasEdit){setMe(pa);lockMe(true)}
   try{
-    await store.save({id,date,pa,pb,games:gs.map(g=>g.join("-")),wa:a,wb:b,fmt:FMT});
+    await store.save({id,date,pa,pb,games:gs.map(g=>g.join("-")),wa:a,wb:b,fmt:FMT,memo:$("memo").value.trim()});
     say(wasEdit?"直しました":"保存しました");
     resetForm(true);
   }catch(e){say("保存できませんでした。もう一度ためしてください",true)}
@@ -224,6 +254,7 @@ function renderList(){
     <span class="big">${m.wa} − ${m.wb}</span>
     <span class="${aw?"":"w"}">${esc(m.pb)}</span>${aw?"":'<span class="badge">勝ち</span>'}</div>
     <div class="sc">${(m.games||[]).map((g,i)=>`<span>${i+1}G ${esc(g.replace("-"," - "))}</span>`).join("")}</div>
+    ${m.memo?`<div class="memo-t">📝 ${esc(m.memo)}</div>`:""}
     <div class="acts"><button class="small ghost" data-edit="${esc(m.id)}">直す</button><button class="small danger" data-del="${esc(m.id)}">消す</button></div></div>`;
   }).join(""):`<div class="empty">${matches.length?"その名前の試合はありません。":"まだ記録がありません。上の欄から最初の1試合を入れてみましょう。"}</div>`;
 }
@@ -236,7 +267,7 @@ $("list").addEventListener("click",async e=>{
   const ed=e.target.closest("[data-edit]"),de=e.target.closest("[data-del]");
   if(ed){
     const m=matches.find(x=>x.id===ed.dataset.edit);if(!m)return;
-    editingId=m.id;lockMe(false);setFmt(m.fmt||5);$("date").value=m.date;$("pa").value=m.pa;$("pb").value=m.pb;
+    editingId=m.id;lockMe(false);setFmt(m.fmt||5);$("date").value=m.date;$("pa").value=m.pa;$("pb").value=m.pb;$("memo").value=m.memo||"";memoHint();
     for(let i=1;i<=G;i++){const g=(m.games||[])[i-1];$("a"+i).value=g?g.split("-")[0]:"";$("b"+i).value=g?g.split("-")[1]:""}
     $("save").textContent="直した内容を保存する";updateResult();say("直したら「直した内容を保存する」を押してください");
     window.scrollTo({top:0,behavior:"smooth"});
@@ -247,8 +278,73 @@ $("list").addEventListener("click",async e=>{
   }
 });
 
+/* ---- 一言メモ(相手の戦型など) ---- */
+const STYLES=["ドライブ型","カット型","ペン表","ペン裏","速攻型","前陣攻撃","オールラウンド","サーブが得意","左利き"];
+$("memoChips").innerHTML=STYLES.map(t=>`<button type="button" class="ghost" data-chip="${esc(t)}">${esc(t)}</button>`).join("");
+$("memoChips").addEventListener("click",e=>{
+  const b=e.target.closest("[data-chip]");if(!b)return;
+  const m=$("memo"),t=b.dataset.chip;
+  if(m.value.includes(t))return;
+  m.value=(m.value?m.value+"、":"")+t;
+});
+function memoHint(){
+  const n=$("pb").value.trim(),h=$("memoHint");
+  if(!n){h.textContent="";return}
+  const last=matches.filter(m=>m.memo&&(m.pb===n||m.pa===n)).sort((a,b)=>(b.date||"").localeCompare(a.date||"")||b.id.localeCompare(a.id))[0];
+  h.textContent=last?"前に書いたメモ:"+last.memo:"";
+}
+$("pb").addEventListener("input",memoHint);$("pb").addEventListener("change",memoHint);
+
 setFmt(FMT);
 initStore();
+
+/* ---- アプリとして追加する案内 ---- */
+(function(){
+  const box=$("inst"),body=$("instBody"),title=$("instT");
+  const ua=navigator.userAgent||"";
+  const standalone=(window.matchMedia&&matchMedia("(display-mode: standalone)").matches)||navigator.standalone===true;
+  let closed=false;try{closed=localStorage.getItem("takkyu-inst-x")==="1"}catch(e){}
+  if(standalone||closed)return;
+  const inApp=/Line\/|FBAN|FBAV|Instagram|Twitter|MicroMessenger|NAVER|KAKAOTALK/i.test(ua);
+  const ios=/iPhone|iPad|iPod/i.test(ua)||(/Macintosh/i.test(ua)&&navigator.maxTouchPoints>1);
+  let dp=null;
+  function show(t,html){title.textContent=t;body.innerHTML=html;box.hidden=false}
+  function copyBtn(){return '<div class="btns"><button type="button" id="cp">リンクをコピー</button></div><p class="hint" id="cpMsg"></p>'}
+  function wireCopy(){
+    const b=$("cp");if(!b)return;
+    b.onclick=async()=>{
+      const url=location.href.split("#")[0];
+      try{await navigator.clipboard.writeText(url);$("cpMsg").textContent="コピーしました。SafariやChromeに貼り付けて開いてください。"}
+      catch(e){$("cpMsg").textContent="コピーできませんでした。アドレスを長く押してコピーしてください:"+url}
+    };
+  }
+  if(inApp){
+    show("ブラウザで開いてください",
+      '<p>今の画面(LINEやSNSの中)では、ホーム画面に追加できません。</p>'+
+      (ios?'<ol><li>画面の右下の <b>共有マーク</b> を押す</li><li><b>「Safariで開く」</b> を押す</li></ol>'
+          :'<ol><li>画面の右上の <b>「︙」</b> を押す</li><li><b>「ブラウザで開く」</b> を押す</li></ol>')+copyBtn());
+    wireCopy();
+  }else if(ios){
+    show("ホーム画面に追加できます",
+      '<p>下の手順で、アプリのようにすぐ開けます。</p><ol><li>画面の下の <b>共有ボタン(□から↑)</b> を押す</li><li>下へ動かして <b>「ホーム画面に追加」</b> を押す</li><li>右上の <b>「追加」</b> を押す</li></ol><p class="hint">※Safariで開いているときだけ追加できます。</p>');
+  }else{
+    // Android / パソコン: 「インストール」ボタンが出せるときだけ出す
+    window.addEventListener("beforeinstallprompt",e=>{
+      e.preventDefault();dp=e;
+      show("アプリとして追加できます",'<p>ボタンを押すだけで、ホーム画面に追加できます。</p><div class="btns"><button type="button" id="ins">ホーム画面に追加する</button></div><p class="hint" id="insMsg"></p>');
+      $("ins").onclick=async()=>{
+        if(!dp)return;
+        try{dp.prompt();const r=await dp.userChoice;$("insMsg").textContent=r&&r.outcome==="accepted"?"追加しました!":"追加をやめました。";if(r&&r.outcome==="accepted")setTimeout(()=>{box.hidden=true},1500)}
+        catch(err){$("insMsg").textContent="追加できませんでした。右上の「︙」→「ホーム画面に追加」をためしてください。"}
+        dp=null;
+      };
+    });
+    window.addEventListener("appinstalled",()=>{box.hidden=true});
+    // イベントが来ない端末向けの案内(2秒待っても出なければ手順だけ表示)
+    setTimeout(()=>{if(box.hidden&&/Android/i.test(ua))show("ホーム画面に追加できます",'<ol><li>画面の右上の <b>「︙」</b> を押す</li><li><b>「ホーム画面に追加」</b>(または「アプリをインストール」)を押す</li><li>もう一度 <b>「追加」</b> を押す</li></ol>')},2000);
+  }
+  $("instX").onclick=()=>{box.hidden=true;try{localStorage.setItem("takkyu-inst-x","1")}catch(e){}};
+})();
 
 if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}))}
 </script></body></html>

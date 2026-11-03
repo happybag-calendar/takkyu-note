@@ -25,6 +25,7 @@ input{font:inherit;color:var(--fg);background:var(--input);border:2px solid var(
 input:focus{outline:3px solid var(--ball);outline-offset:1px}
 .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .date{margin-bottom:12px}
+.fmt{display:flex;gap:10px;margin:0 0 14px}.fmt label{flex:1;margin:0;cursor:pointer}.fmt input{position:absolute;opacity:0;width:1px;height:1px}.fmt span{display:block;text-align:center;border:2px solid var(--line);border-radius:12px;padding:10px 6px;font-weight:bold;background:var(--input)}.fmt input:checked+span{background:var(--green);color:var(--green-fg);border-color:var(--green)}.fmt input:focus-visible+span{outline:3px solid var(--ball);outline-offset:2px}.tag{font-size:14px;border:1px solid var(--line);border-radius:20px;padding:0 10px}
 .games{display:grid;grid-template-columns:3.2em 1fr 1fr;gap:8px 10px;align-items:center;margin:14px 0 4px}
 .games .h{font-weight:bold;color:var(--sub);font-size:15px;text-align:center;overflow-wrap:anywhere}
 .games .g{font-weight:bold;color:var(--sub)}
@@ -66,13 +67,14 @@ th{color:var(--sub);font-size:15px}
 <section class="card" aria-labelledby="t1">
 <h2 id="t1">試合を記録する</h2>
 <div class="date"><label for="date">対戦日</label><input type="date" id="date"></div>
+<div class="fmt" role="radiogroup" aria-label="試合の形式"><label><input type="radio" name="fmt" value="3"><span>3ゲームマッチ</span></label><label><input type="radio" name="fmt" value="5"><span>5ゲームマッチ</span></label></div>
 <div class="row">
 <div><label for="pa">選手A(あなた)の名前</label><input id="pa" list="names" placeholder="例:山田" autocomplete="off"><div class="hint" style="margin-top:2px" id="meHint">一度保存すると、あなたの名前として固定されます</div></div>
 <div><label for="pb">選手B の名前</label><input id="pb" list="names" placeholder="例:佐藤" autocomplete="off"></div>
 </div>
 <datalist id="names"></datalist>
 <div class="games" id="games"></div>
-<p class="hint">点数が入ったゲームだけ数えます。5ゲーム目まで入力できます。</p>
+<p class="hint" id="hintTxt"></p>
 <div class="result" id="result">点数を入れると、勝ち負けがここに出ます</div>
 <div class="btns"><button id="save">保存する</button><button class="ghost" id="clear">入力をリセット</button></div>
 <div class="msg" id="msg" role="status"></div>
@@ -128,16 +130,27 @@ lockMe(!!getMe());
   const g=$("games");
   g.innerHTML='<div></div><div class="h" id="ha">選手A</div><div class="h" id="hb">選手B</div>';
   for(let i=1;i<=G;i++){
-    g.insertAdjacentHTML("beforeend",`<div class="g">${i}G</div>
-    <input type="number" inputmode="numeric" min="0" max="99" id="a${i}" aria-label="${i}ゲーム目 選手Aの点数">
-    <input type="number" inputmode="numeric" min="0" max="99" id="b${i}" aria-label="${i}ゲーム目 選手Bの点数">`);
+    g.insertAdjacentHTML("beforeend",`<div class="g" data-r="${i}">${i}G</div>
+    <input type="number" inputmode="numeric" min="0" max="99" data-r="${i}" id="a${i}" aria-label="${i}ゲーム目 選手Aの点数">
+    <input type="number" inputmode="numeric" min="0" max="99" data-r="${i}" id="b${i}" aria-label="${i}ゲーム目 選手Bの点数">`);
   }
   const d=new Date();$("date").value=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
 })();
 
+let FMT=5;
+try{const v=+localStorage.getItem("takkyu-fmt");if(v===3||v===5)FMT=v}catch(e){}
+function need(){return(FMT+1)/2}
+function setFmt(n,keep){
+  FMT=n;try{localStorage.setItem("takkyu-fmt",String(n))}catch(e){}
+  document.querySelectorAll('input[name="fmt"]').forEach(r=>r.checked=(+r.value===n));
+  document.querySelectorAll("#games [data-r]").forEach(el=>{const hid=+el.dataset.r>n;el.hidden=hid;if(hid&&el.tagName==="INPUT")el.value=""});
+  $("hintTxt").textContent=n+"ゲームマッチ:先に"+need()+"ゲーム取った人の勝ちです。";
+  updateResult();
+}
+document.addEventListener("change",e=>{if(e.target.name==="fmt")setFmt(+e.target.value)});
 function readGames(){
   const gs=[];
-  for(let i=1;i<=G;i++){
+  for(let i=1;i<=FMT;i++){
     const a=$("a"+i).value,b=$("b"+i).value;
     if(a!==""&&b!=="")gs.push([+a,+b]);
   }
@@ -151,7 +164,7 @@ function updateResult(){
   $("ha").textContent=pa;$("hb").textContent=pb;
   const gs=readGames(),[a,b]=tally(gs),r=$("result");
   if(!gs.length){r.className="result";r.textContent="点数を入れると、勝ち負けがここに出ます";return}
-  if(a===b){r.className="result";r.textContent=`${a} − ${b} 引き分け`;return}
+  if(Math.max(a,b)<need()){r.className="result";r.textContent=`${a} − ${b}(先に${need()}ゲームで勝ち)`;return}
   r.className="result win";
   r.textContent=`${a>b?pa:pb} の勝ち(${Math.max(a,b)} − ${Math.min(a,b)})`;
 }
@@ -172,11 +185,11 @@ $("save").onclick=async()=>{
   if(pa===pb)return say("2人の名前が同じです。別の名前にしてください",true);
   if(!gs.length)return say("点数を1ゲーム以上入れてください",true);
   const [a,b]=tally(gs);
-  if(a===b)return say("勝ち負けが同じです。点数をもう一度見てください",true);
+  if(Math.max(a,b)<need())return say(FMT+"ゲームマッチは、先に"+need()+"ゲーム取った人の勝ちです。点数を見直してください",true);
   const id=editingId||("m"+Date.now().toString(36)+Math.random().toString(36).slice(2,6));
   const wasEdit=!!editingId;if(!wasEdit){setMe(pa);lockMe(true)}
   try{
-    await store.save({id,date,pa,pb,games:gs.map(g=>g.join("-")),wa:a,wb:b});
+    await store.save({id,date,pa,pb,games:gs.map(g=>g.join("-")),wa:a,wb:b,fmt:FMT});
     say(wasEdit?"直しました":"保存しました");
     resetForm(true);
   }catch(e){say("保存できませんでした。もう一度ためしてください",true)}
@@ -206,7 +219,7 @@ function renderList(){
     .sort((a,b)=>(b.date||"").localeCompare(a.date||"")||b.id.localeCompare(a.id));
   $("list").innerHTML=list.length?list.map(m=>{
     const aw=m.wa>m.wb;
-    return `<div class="m"><div class="top"><span>${fmtDate(m.date)}</span></div>
+    return `<div class="m"><div class="top"><span>${fmtDate(m.date)}</span>${m.fmt?`<span class="tag">${m.fmt}ゲームマッチ</span>`:""}</div>
     <div class="vs"><span class="${aw?"w":""}">${esc(m.pa)}</span>${aw?'<span class="badge">勝ち</span>':""}
     <span class="big">${m.wa} − ${m.wb}</span>
     <span class="${aw?"":"w"}">${esc(m.pb)}</span>${aw?"":'<span class="badge">勝ち</span>'}</div>
@@ -223,7 +236,7 @@ $("list").addEventListener("click",async e=>{
   const ed=e.target.closest("[data-edit]"),de=e.target.closest("[data-del]");
   if(ed){
     const m=matches.find(x=>x.id===ed.dataset.edit);if(!m)return;
-    editingId=m.id;lockMe(false);$("date").value=m.date;$("pa").value=m.pa;$("pb").value=m.pb;
+    editingId=m.id;lockMe(false);setFmt(m.fmt||5);$("date").value=m.date;$("pa").value=m.pa;$("pb").value=m.pb;
     for(let i=1;i<=G;i++){const g=(m.games||[])[i-1];$("a"+i).value=g?g.split("-")[0]:"";$("b"+i).value=g?g.split("-")[1]:""}
     $("save").textContent="直した内容を保存する";updateResult();say("直したら「直した内容を保存する」を押してください");
     window.scrollTo({top:0,behavior:"smooth"});
@@ -234,7 +247,7 @@ $("list").addEventListener("click",async e=>{
   }
 });
 
-updateResult();
+setFmt(FMT);
 initStore();
 
 if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}))}

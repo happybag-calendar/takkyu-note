@@ -279,7 +279,7 @@ $("list").addEventListener("click",async e=>{
 });
 
 /* ---- 一言メモ(相手の戦型など) ---- */
-const STYLES=["ドライブ型","カット型","守備型","ペン表","ペン裏","速攻型","前陣攻撃","オールラウンド","表ラバー","異質ラバー","ツッツキが上手","サーブが得意","左利き"];
+const STYLES=["ドライブ型","カット型","守備型","ペン","中国式ペン","速攻型","前陣攻撃","オールラウンド","表ラバー","裏裏","異質ラバー","ツッツキが上手","サーブが得意","左利き"];
 $("memoChips").innerHTML=STYLES.map(t=>`<button type="button" class="ghost" data-chip="${esc(t)}">${esc(t)}</button>`).join("");
 $("memoChips").addEventListener("click",e=>{
   const b=e.target.closest("[data-chip]");if(!b)return;

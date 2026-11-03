@@ -20,19 +20,19 @@ h1{margin:0;font-size:28px;line-height:1.3;display:flex;align-items:center;gap:1
 h1 i{width:26px;height:26px;border-radius:50%;background:var(--ball);display:inline-block;flex:none}
 h2{margin:0 0 10px;font-size:21px}
 .card{background:var(--card);border:2px solid var(--line);border-radius:14px;padding:16px}
-label{display:block;font-weight:bold;margin-bottom:4px}
+label{display:block;font-weight:bold;margin-bottom:4px;word-break:keep-all;overflow-wrap:anywhere}
 input{font:inherit;color:var(--fg);background:var(--input);border:2px solid var(--line);border-radius:10px;padding:10px 12px;width:100%;min-width:0}
 input:focus{outline:3px solid var(--ball);outline-offset:1px}
-.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.row{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr));gap:12px}
 .date{margin-bottom:12px}
-.fmt{display:flex;gap:10px;margin:0 0 14px}.fmt label{flex:1;margin:0;cursor:pointer}.fmt input{position:absolute;opacity:0;width:1px;height:1px}.fmt span{display:block;text-align:center;border:2px solid var(--line);border-radius:12px;padding:10px 6px;font-weight:bold;background:var(--input)}.fmt input:checked+span{background:var(--green);color:var(--green-fg);border-color:var(--green)}.fmt input:focus-visible+span{outline:3px solid var(--ball);outline-offset:2px}.tag{font-size:14px;border:1px solid var(--line);border-radius:20px;padding:0 10px}
+.fmt{display:flex;gap:10px;margin:0 0 14px}.fmt label{flex:1;margin:0;cursor:pointer}.fmt input{position:absolute;opacity:0;width:1px;height:1px}.fmt span{word-break:keep-all;overflow-wrap:normal;line-height:1.35;display:block;text-align:center;border:2px solid var(--line);border-radius:12px;padding:10px 6px;font-weight:bold;background:var(--input)}.fmt input:checked+span{background:var(--green);color:var(--green-fg);border-color:var(--green)}.fmt input:focus-visible+span{outline:3px solid var(--ball);outline-offset:2px}.tag{font-size:14px;border:1px solid var(--line);border-radius:20px;padding:0 10px}
 .games{display:grid;grid-template-columns:3.2em 1fr 1fr;gap:8px 10px;align-items:center;margin:14px 0 4px}
 .games .h{font-weight:bold;color:var(--sub);font-size:15px;text-align:center;overflow-wrap:anywhere}
 .games .g{font-weight:bold;color:var(--sub)}
 .games input{text-align:center;font-size:24px;font-weight:bold;padding:8px 4px}
 .result{margin-top:14px;border-radius:12px;padding:12px 14px;font-size:22px;font-weight:bold;text-align:center;background:var(--bg);border:2px dashed var(--line);color:var(--sub)}
 .result.win{background:var(--winbg);color:var(--win);border:2px solid var(--win)}
-.hint{font-size:15px;color:var(--sub);margin:6px 0 0}
+.hint{word-break:keep-all;overflow-wrap:anywhere;font-size:15px;color:var(--sub);margin:6px 0 0}
 .btns{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
 button{font:inherit;font-weight:bold;border-radius:12px;border:2px solid var(--green);padding:12px 20px;cursor:pointer;background:var(--green);color:var(--green-fg);min-height:48px}
 button.ghost{background:transparent;color:var(--fg);border-color:var(--line)}
@@ -67,7 +67,7 @@ th{color:var(--sub);font-size:15px}
 <section class="card" aria-labelledby="t1">
 <h2 id="t1">試合を記録する</h2>
 <div class="date"><label for="date">対戦日</label><input type="date" id="date"></div>
-<div class="fmt" role="radiogroup" aria-label="試合の形式"><label><input type="radio" name="fmt" value="3"><span>3ゲームマッチ</span></label><label><input type="radio" name="fmt" value="5"><span>5ゲームマッチ</span></label></div>
+<div class="fmt" role="radiogroup" aria-label="試合の形式"><label><input type="radio" name="fmt" value="3"><span>3ゲーム<wbr>マッチ</span></label><label><input type="radio" name="fmt" value="5"><span>5ゲーム<wbr>マッチ</span></label></div>
 <div class="row">
 <div><label for="pa">選手A(あなた)の名前</label><input id="pa" list="names" placeholder="例:山田" autocomplete="off"><div class="hint" style="margin-top:2px" id="meHint">一度保存すると、あなたの名前として固定されます</div></div>
 <div><label for="pb">選手B の名前</label><input id="pb" list="names" placeholder="例:佐藤" autocomplete="off"></div>

@@ -67,7 +67,7 @@ th{color:var(--sub);font-size:15px}
 <h2 id="t1">試合を記録する</h2>
 <div class="date"><label for="date">対戦日</label><input type="date" id="date"></div>
 <div class="row">
-<div><label for="pa">選手A の名前</label><input id="pa" list="names" placeholder="例:山田" autocomplete="off"></div>
+<div><label for="pa">選手A(あなた)の名前</label><input id="pa" list="names" placeholder="例:山田" autocomplete="off"><div class="hint" style="margin-top:2px" id="meHint">一度保存すると、あなたの名前として固定されます</div></div>
 <div><label for="pb">選手B の名前</label><input id="pb" list="names" placeholder="例:佐藤" autocomplete="off"></div>
 </div>
 <datalist id="names"></datalist>
@@ -114,6 +114,16 @@ function useLocal(){
 
 /* ---- 入力欄 ---- */
 const G=5;
+function getMe(){try{return localStorage.getItem("takkyu-me")||""}catch(e){return""}}
+function setMe(v){try{localStorage.setItem("takkyu-me",v)}catch(e){}}
+$("pa").value=getMe();
+function lockMe(on){
+  const pa=$("pa"),h=$("meHint");
+  pa.readOnly=on;pa.style.background=on?"var(--bg)":"";
+  h.innerHTML=on?'あなたの名前で固定中 <button type="button" class="small ghost" id="unlock" style="margin-left:6px">名前を変える</button>':"一度保存すると、あなたの名前として固定されます";
+  if(on)$("unlock").onclick=()=>{lockMe(false);pa.focus();pa.select()};
+}
+lockMe(!!getMe());
 (function build(){
   const g=$("games");
   g.innerHTML='<div></div><div class="h" id="ha">選手A</div><div class="h" id="hb">選手B</div>';
@@ -150,8 +160,8 @@ document.addEventListener("input",e=>{if(e.target.closest(".games")||e.target.id
 function say(t,err){const m=$("msg");m.textContent=t;m.className="msg"+(err?" err":"")}
 function resetForm(keepNames){
   for(let i=1;i<=G;i++){$("a"+i).value="";$("b"+i).value=""}
-  if(!keepNames){$("pa").value="";$("pb").value=""}
-  editingId=null;$("save").textContent="保存する";updateResult();
+  if(!keepNames){$("pa").value=getMe();$("pb").value=""}
+  editingId=null;lockMe(!!getMe());$("save").textContent="保存する";updateResult();
 }
 $("clear").onclick=()=>{resetForm(false);say("")};
 
@@ -164,7 +174,7 @@ $("save").onclick=async()=>{
   const [a,b]=tally(gs);
   if(a===b)return say("勝ち負けが同じです。点数をもう一度見てください",true);
   const id=editingId||("m"+Date.now().toString(36)+Math.random().toString(36).slice(2,6));
-  const wasEdit=!!editingId;
+  const wasEdit=!!editingId;if(!wasEdit){setMe(pa);lockMe(true)}
   try{
     await store.save({id,date,pa,pb,games:gs.map(g=>g.join("-")),wa:a,wb:b});
     say(wasEdit?"直しました":"保存しました");
@@ -213,7 +223,7 @@ $("list").addEventListener("click",async e=>{
   const ed=e.target.closest("[data-edit]"),de=e.target.closest("[data-del]");
   if(ed){
     const m=matches.find(x=>x.id===ed.dataset.edit);if(!m)return;
-    editingId=m.id;$("date").value=m.date;$("pa").value=m.pa;$("pb").value=m.pb;
+    editingId=m.id;lockMe(false);$("date").value=m.date;$("pa").value=m.pa;$("pb").value=m.pb;
     for(let i=1;i<=G;i++){const g=(m.games||[])[i-1];$("a"+i).value=g?g.split("-")[0]:"";$("b"+i).value=g?g.split("-")[1]:""}
     $("save").textContent="直した内容を保存する";updateResult();say("直したら「直した内容を保存する」を押してください");
     window.scrollTo({top:0,behavior:"smooth"});

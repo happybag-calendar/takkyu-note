@@ -67,10 +67,10 @@ th{color:var(--sub);font-size:15px}
 <section class="card" aria-labelledby="t1">
 <h2 id="t1">試合を記録する</h2>
 <div class="date"><label for="date">対戦日</label><input type="date" id="date"></div>
-<div class="fmt" role="radiogroup" aria-label="試合の形式"><label><input type="radio" name="fmt" value="3"><span>3ゲーム<wbr>マッチ</span></label><label><input type="radio" name="fmt" value="5"><span>5ゲーム<wbr>マッチ</span></label></div>
+<div class="fmt" role="radiogroup" aria-label="試合の形式"><label><input type="radio" name="fmt" value="3"><span>3ゲーム</span></label><label><input type="radio" name="fmt" value="5"><span>5ゲーム</span></label></div>
 <div class="row">
-<div><label for="pa">選手A(あなた)の名前</label><input id="pa" list="names" placeholder="例:山田" autocomplete="off"><div class="hint" style="margin-top:2px" id="meHint">一度保存すると、あなたの名前として固定されます</div></div>
-<div><label for="pb">選手B の名前</label><input id="pb" list="names" placeholder="例:佐藤" autocomplete="off"></div>
+<div><label for="pa">私の名前</label><input id="pa" list="names" placeholder="例:山田" autocomplete="off"><div class="hint" style="margin-top:2px" id="meHint">一度保存すると、あなたの名前として固定されます</div></div>
+<div><label for="pb">対戦相手</label><input id="pb" list="names" placeholder="例:佐藤" autocomplete="off"></div>
 </div>
 <datalist id="names"></datalist>
 <div class="games" id="games"></div>
@@ -128,11 +128,11 @@ function lockMe(on){
 lockMe(!!getMe());
 (function build(){
   const g=$("games");
-  g.innerHTML='<div></div><div class="h" id="ha">選手A</div><div class="h" id="hb">選手B</div>';
+  g.innerHTML='<div></div><div class="h" id="ha">私</div><div class="h" id="hb">対戦相手</div>';
   for(let i=1;i<=G;i++){
     g.insertAdjacentHTML("beforeend",`<div class="g" data-r="${i}">${i}G</div>
-    <input type="number" inputmode="numeric" min="0" max="99" data-r="${i}" id="a${i}" aria-label="${i}ゲーム目 選手Aの点数">
-    <input type="number" inputmode="numeric" min="0" max="99" data-r="${i}" id="b${i}" aria-label="${i}ゲーム目 選手Bの点数">`);
+    <input type="number" inputmode="numeric" min="0" max="99" data-r="${i}" id="a${i}" aria-label="${i}ゲーム目 私の点数">
+    <input type="number" inputmode="numeric" min="0" max="99" data-r="${i}" id="b${i}" aria-label="${i}ゲーム目 対戦相手の点数">`);
   }
   const d=new Date();$("date").value=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
 })();
@@ -160,7 +160,7 @@ function tally(gs){let a=0,b=0;gs.forEach(([x,y])=>{if(x>y)a++;else if(y>x)b++})
 function nm(v,d){return v.trim()||d}
 
 function updateResult(){
-  const pa=nm($("pa").value,"選手A"),pb=nm($("pb").value,"選手B");
+  const pa=nm($("pa").value,"私"),pb=nm($("pb").value,"対戦相手");
   $("ha").textContent=pa;$("hb").textContent=pb;
   const gs=readGames(),[a,b]=tally(gs),r=$("result");
   if(!gs.length){r.className="result";r.textContent="点数を入れると、勝ち負けがここに出ます";return}
@@ -181,7 +181,7 @@ $("clear").onclick=()=>{resetForm(false);say("")};
 $("save").onclick=async()=>{
   const pa=$("pa").value.trim(),pb=$("pb").value.trim(),date=$("date").value,gs=readGames();
   if(!date)return say("対戦日を入れてください",true);
-  if(!pa||!pb)return say("選手A・選手Bの名前を入れてください",true);
+  if(!pa||!pb)return say("私の名前と対戦相手の名前を入れてください",true);
   if(pa===pb)return say("2人の名前が同じです。別の名前にしてください",true);
   if(!gs.length)return say("点数を1ゲーム以上入れてください",true);
   const [a,b]=tally(gs);

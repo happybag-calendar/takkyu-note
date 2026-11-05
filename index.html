@@ -35,7 +35,9 @@ label{display:block;font-weight:bold;margin-bottom:4px;word-break:keep-all;overf
 input{font:inherit;color:var(--fg);background:var(--input);border:2px solid var(--line);border-radius:10px;padding:10px 12px;width:100%;min-width:0}
 input:focus{outline:3px solid var(--ball);outline-offset:1px}
 .row{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr));gap:12px}
-.date{margin-bottom:12px}
+.date{margin-bottom:12px;display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:10px}
+.date input[type=date]{padding-left:8px;padding-right:6px}
+.m .taikai{font-weight:bold;color:var(--fg)}
 .fmt{display:flex;gap:10px;margin:0 0 14px}.fmt label{flex:1;margin:0;cursor:pointer}.fmt input{position:absolute;opacity:0;width:1px;height:1px}.fmt span{word-break:keep-all;overflow-wrap:normal;line-height:1.35;display:block;text-align:center;border:2px solid var(--line);border-radius:12px;padding:10px 6px;font-weight:bold;background:var(--input)}.fmt input:checked+span{background:var(--green);color:var(--green-fg);border-color:var(--green)}.fmt input:focus-visible+span{outline:3px solid var(--ball);outline-offset:2px}.tag{font-size:14px;border:1px solid var(--line);border-radius:20px;padding:0 10px}
 .games{display:grid;grid-template-columns:3.2em 1fr 1fr;gap:8px 10px;align-items:center;margin:14px 0 4px}
 .games .h{font-weight:bold;color:var(--sub);font-size:15px;text-align:center;overflow-wrap:anywhere}
@@ -93,7 +95,8 @@ th{color:var(--sub);font-size:15px}
 
 <section class="card" aria-labelledby="t1">
 <h2 id="t1">試合を記録する</h2>
-<div class="date"><label for="date">対戦日</label><input type="date" id="date"></div>
+<div class="date"><div><label for="date">対戦日</label><input type="date" id="date"></div><div><label for="taikai">大会名</label><input id="taikai" list="taikais" maxlength="40" placeholder="なくてもOK" autocomplete="off"></div></div>
+<datalist id="taikais"></datalist>
 <div class="fmt" role="radiogroup" aria-label="試合の形式"><label><input type="radio" name="fmt" value="3"><span>3ゲーム</span></label><label><input type="radio" name="fmt" value="5"><span>5ゲーム</span></label></div>
 <div class="row">
 <div><label for="pa">私の名前</label><input id="pa" list="names" placeholder="例:山田" autocomplete="off"><div class="hint" style="margin-top:2px" id="meHint">一度保存すると、あなたの名前として固定されます</div></div>
@@ -118,7 +121,7 @@ th{color:var(--sub);font-size:15px}
 <section class="card">
 <h2>これまでの試合</h2>
 <div class="tools">
-<div><label for="filter">選手名でしぼる</label><input id="filter" list="names" placeholder="名前を入れる(空なら全部)" autocomplete="off"></div>
+<div><label for="filter">選手名・大会名でしぼる</label><input id="filter" placeholder="名前や大会名を入れる(空なら全部)" autocomplete="off"></div>
 </div>
 <div id="list"></div>
 <p class="note" id="where"></p>
@@ -203,7 +206,7 @@ document.addEventListener("input",e=>{if(e.target.closest(".games")||e.target.id
 function say(t,err){const m=$("msg");m.textContent=t;m.className="msg"+(err?" err":"")}
 function resetForm(keepNames){
   for(let i=1;i<=G;i++){$("a"+i).value="";$("b"+i).value=""}
-  $("memo").value="";if(!keepNames){$("pa").value=getMe();$("pb").value=""}memoHint();
+  $("memo").value="";if(!keepNames){$("pa").value=getMe();$("pb").value="";$("taikai").value=""}memoHint();
   editingId=null;lockMe(!!getMe());$("save").textContent="保存する";updateResult();
 }
 $("clear").onclick=()=>{resetForm(false);say("")};
@@ -219,7 +222,7 @@ $("save").onclick=async()=>{
   const id=editingId||("m"+Date.now().toString(36)+Math.random().toString(36).slice(2,6));
   const wasEdit=!!editingId;if(!wasEdit){setMe(pa);lockMe(true)}
   try{
-    await store.save({id,date,pa,pb,games:gs.map(g=>g.join("-")),wa:a,wb:b,fmt:FMT,memo:$("memo").value.trim()});
+    await store.save({id,date,pa,pb,games:gs.map(g=>g.join("-")),wa:a,wb:b,fmt:FMT,memo:$("memo").value.trim(),taikai:$("taikai").value.trim()});
     say(wasEdit?"直しました":"保存しました");
     resetForm(true);
   }catch(e){say("保存できませんでした。もう一度ためしてください",true)}
@@ -245,21 +248,22 @@ function renderStats(){
 }
 function renderList(){
   const f=$("filter").value.trim();
-  const list=matches.filter(m=>!f||m.pa.includes(f)||m.pb.includes(f))
+  const list=matches.filter(m=>!f||m.pa.includes(f)||m.pb.includes(f)||(m.taikai||"").includes(f))
     .sort((a,b)=>(b.date||"").localeCompare(a.date||"")||b.id.localeCompare(a.id));
   $("list").innerHTML=list.length?list.map(m=>{
     const aw=m.wa>m.wb;
-    return `<div class="m"><div class="top"><span>${fmtDate(m.date)}</span>${m.fmt?`<span class="tag">${m.fmt}ゲームマッチ</span>`:""}</div>
+    return `<div class="m"><div class="top"><span>${fmtDate(m.date)}${m.taikai?`<span class="taikai">　${esc(m.taikai)}</span>`:""}</span>${m.fmt?`<span class="tag">${m.fmt}ゲームマッチ</span>`:""}</div>
     <div class="vs"><span class="${aw?"w":""}">${esc(m.pa)}</span>${aw?'<span class="badge">勝ち</span>':""}
     <span class="big">${m.wa} − ${m.wb}</span>
     <span class="${aw?"":"w"}">${esc(m.pb)}</span>${aw?"":'<span class="badge">勝ち</span>'}</div>
     <div class="sc">${(m.games||[]).map((g,i)=>`<span>${i+1}G ${esc(g.replace("-"," - "))}</span>`).join("")}</div>
     ${m.memo?`<div class="memo-t">📝 ${esc(m.memo)}</div>`:""}
     <div class="acts"><button class="small ghost" data-edit="${esc(m.id)}">直す</button><button class="small danger" data-del="${esc(m.id)}">消す</button></div></div>`;
-  }).join(""):`<div class="empty">${matches.length?"その名前の試合はありません。":"まだ記録がありません。上の欄から最初の1試合を入れてみましょう。"}</div>`;
+  }).join(""):`<div class="empty">${matches.length?"その名前・大会名の試合はありません。":"まだ記録がありません。上の欄から最初の1試合を入れてみましょう。"}</div>`;
 }
 function render(){
   $("names").innerHTML=names().map(n=>`<option value="${esc(n)}">`).join("");
+  $("taikais").innerHTML=[...new Set(matches.map(m=>m.taikai).filter(Boolean))].map(n=>`<option value="${esc(n)}">`).join("");
   renderStats();renderList();
 }
 let delArm=null;
@@ -267,7 +271,7 @@ $("list").addEventListener("click",async e=>{
   const ed=e.target.closest("[data-edit]"),de=e.target.closest("[data-del]");
   if(ed){
     const m=matches.find(x=>x.id===ed.dataset.edit);if(!m)return;
-    editingId=m.id;lockMe(false);setFmt(m.fmt||5);$("date").value=m.date;$("pa").value=m.pa;$("pb").value=m.pb;$("memo").value=m.memo||"";memoHint();
+    editingId=m.id;lockMe(false);setFmt(m.fmt||5);$("date").value=m.date;$("taikai").value=m.taikai||"";$("pa").value=m.pa;$("pb").value=m.pb;$("memo").value=m.memo||"";memoHint();
     for(let i=1;i<=G;i++){const g=(m.games||[])[i-1];$("a"+i).value=g?g.split("-")[0]:"";$("b"+i).value=g?g.split("-")[1]:""}
     $("save").textContent="直した内容を保存する";updateResult();say("直したら「直した内容を保存する」を押してください");
     window.scrollTo({top:0,behavior:"smooth"});

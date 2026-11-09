@@ -114,7 +114,7 @@ th{color:var(--sub);font-size:15px}
 </section>
 
 <section class="card">
-<h2>選手ごとの成績</h2>
+<h2>相手ごとの成績(私から見て)</h2>
 <div class="scroll" id="stats"></div>
 </section>
 
@@ -234,15 +234,18 @@ function fmtDate(s){const p=(s||"").split("-");return p.length===3?`${+p[0]}年$
 function names(){return[...new Set(matches.flatMap(m=>[m.pa,m.pb]))].sort((x,y)=>x.localeCompare(y,"ja"))}
 
 function renderStats(){
+  const me=getMe()||((matches[0]||{}).pa)||"";
   const s={};
   matches.forEach(m=>{
-    [[m.pa,m.wa>m.wb,m.wa,m.wb],[m.pb,m.wb>m.wa,m.wb,m.wa]].forEach(([n,w,gw,gl])=>{
-      const o=s[n]||(s[n]={n,w:0,l:0,gw:0,gl:0});
-      if(w)o.w++;else o.l++;o.gw+=gw;o.gl+=gl;
-    });
+    let n,gw,gl;
+    if(m.pa===me){n=m.pb;gw=m.wa;gl=m.wb}
+    else if(m.pb===me){n=m.pa;gw=m.wb;gl=m.wa}
+    else return;
+    const o=s[n]||(s[n]={n,w:0,l:0,gw:0,gl:0});
+    if(gw>gl)o.w++;else o.l++;o.gw+=gw;o.gl+=gl;
   });
-  const rows=Object.values(s).sort((a,b)=>(b.w/(b.w+b.l))-(a.w/(a.w+a.l))||b.w-a.w);
-  $("stats").innerHTML=rows.length?`<table><tr><th>選手</th><th>勝</th><th>負</th><th>勝率</th><th>取ったG</th></tr>`+
+  const rows=Object.values(s).sort((a,b)=>(b.w+b.l)-(a.w+a.l)||a.n.localeCompare(b.n,"ja"));
+  $("stats").innerHTML=rows.length?`<table><tr><th>相手</th><th>勝</th><th>負</th><th>勝率</th><th>取ったG</th></tr>`+
     rows.map(o=>`<tr><td>${esc(o.n)}</td><td style="color:var(--win);font-weight:bold">${o.w}</td><td style="color:var(--lose);font-weight:bold">${o.l}</td><td>${Math.round(o.w/(o.w+o.l)*100)}%</td><td>${o.gw}-${o.gl}</td></tr>`).join("")+`</table>`
     :'<div class="empty">試合を保存すると、ここに勝ち負けの数が出ます。</div>';
 }
